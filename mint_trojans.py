@@ -18,11 +18,18 @@ initial_conditions = {
   'action': 'mint',
   'update_index': 0,
   'DAO_tax_rate': 0.02,
+  'redist_tax_rate': 0.01,
+  'redist': 0,
 }
 
-def choose_holder_to_update(params, step, sL, s):
-  index = np.random.randint(0, s['n']-1)
-  print("Index to update is %s" % (index))
+def choose_holder_to_mint(params, step, sL, s):
+  index = np.random.randint(2, s['n'])
+  print("Index to mint is %s" % (index))
+  return ({'update_index': index})
+
+def choose_holder_to_burn(params, step, sL, s):
+  index = np.random.randint(1, s['n'])
+  print("Index to burn is %s" % (index))
   return ({'update_index': index})
 
 def choose_action(params, step, sL, s):
@@ -38,6 +45,14 @@ def update_BC_reserve_mint(params, step, sL, s, _input):
     print("New BC reserve is %s" % (x))
     return (y, x)
 
+def update_total_tokens_mint(params, step, sL, s, _input):
+    y = 'total_tokens'
+    amount_to_mint = 0
+    if (_input['update_index'] > 1):
+        amount_to_mint = s['amount_to_mint']
+    x = s['total_tokens'] + amount_to_mint
+    return (y, x)
+
 def update_token_holders_mint(params, step, sL, s, _input):
   y = 'token_holders'
   x = s['token_holders']
@@ -45,21 +60,47 @@ def update_token_holders_mint(params, step, sL, s, _input):
   amount_to_mint = 0
   DAO_tax_amount = 0
   if (update_index > 1):
-    amount_to_mint = s['amount_to_mint'] * (1 - s['DAO_tax_rate'])
+    amount_to_mint = s['amount_to_mint'] * (1 - s['DAO_tax_rate'] - s['redist_tax_rate'])
     x[update_index] = x[update_index] + amount_to_mint
     DAO_tax_amount = s['amount_to_mint'] * s['DAO_tax_rate']
     x[0] = x[0] + DAO_tax_amount
   print(x)
   return (y, x)
 
+def update_redistribution_amount_mint(params, step, sL, s, _input):
+  y = 'redist'
+  update_index = _input['update_index']
+  redist_tax_amount = 0
+  if (update_index > 1):
+    redist_tax_amount = s['amount_to_mint'] * s['redist_tax_rate']
+  print(redist_tax_amount)
+  return (y, redist_tax_amount)
+
+def redistribute(params, step, sL, s, _input):
+  y = 'token_holders'
+  x = s['token_holders']
+  redist = s['redist']
+  total_tokens = s['total_tokens']
+  print("Redistribute %s based on total %s" % (redist, total_tokens))
+  return (y, x)
+
 partial_state_update_blocks = [
     { 
         'policies': {
-            'choose_holder_to_update': choose_holder_to_update, 
+            'choose_holder_to_mint': choose_holder_to_mint, 
         },
         'variables': {
             'BC_reserve': update_BC_reserve_mint,
-            'token_holders': update_token_holders_mint
+            'token_holders': update_token_holders_mint,
+            'redist': update_redistribution_amount_mint,
+            'total_tokens': update_total_tokens_mint,
+        }
+    },
+        { 
+        'policies': {
+        },
+        'variables': {
+            'token_holders': redistribute,
         }
     },
 ]
