@@ -79,9 +79,13 @@ def update_redistribution_amount_mint(params, step, sL, s, _input):
 def redistribute(params, step, sL, s, _input):
   y = 'token_holders'
   x = s['token_holders']
+  n = s['n']
   redist = s['redist']
   total_tokens = s['total_tokens']
   print("Redistribute %s based on total %s" % (redist, total_tokens))
+  for i in range(0, n):
+      x[i] = x[i] + redist * x[i] / total_tokens
+  print(x)
   return (y, x)
 
 partial_state_update_blocks = [
