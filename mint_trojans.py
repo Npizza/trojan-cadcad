@@ -17,6 +17,7 @@ initial_conditions = {
   'total_tokens': 0,
   'action': 'mint',
   'update_index': 0,
+  'DAO_tax_rate': 0.02,
 }
 
 def choose_holder_to_update(params, step, sL, s):
@@ -40,9 +41,14 @@ def update_BC_reserve_mint(params, step, sL, s, _input):
 def update_token_holders_mint(params, step, sL, s, _input):
   y = 'token_holders'
   x = s['token_holders']
-  update_index = _input['update_index'] # np.random.randint(0, s['n']-1)
+  update_index = _input['update_index']
+  amount_to_mint = 0
+  DAO_tax_amount = 0
   if (update_index > 1):
-    x[update_index] = x[update_index] + s['amount_to_mint']
+    amount_to_mint = s['amount_to_mint'] * (1 - s['DAO_tax_rate'])
+    x[update_index] = x[update_index] + amount_to_mint
+    DAO_tax_amount = s['amount_to_mint'] * s['DAO_tax_rate']
+    x[0] = x[0] + DAO_tax_amount
   print(x)
   return (y, x)
 
