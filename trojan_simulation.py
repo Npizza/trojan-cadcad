@@ -143,4 +143,17 @@ exec_context = ExecutionContext(exec_mode.single_proc)
 executor = Executor(exec_context, [config])
 raw_result, tensor = executor.execute()
 
+plt.close('all')
+
+df = pd.DataFrame(raw_result, columns=['BC_reserve', 'token_holders', 'Value', 'run', 'timestep', 'substep'])
+df.set_index(['run', 'timestep', 'substep'])
+
+df.plot('timestep', ['BC_reserve'], grid=True, 
+        colormap = 'RdYlGn',
+        xticks=list(df['timestep'].drop_duplicates()), 
+        yticks=list(range(1000)))
+
+for aid, grp in df.groupby(['token_holders']):
+    plt.plot(grp['Value'].values) 
+
 plt.show()
