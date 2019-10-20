@@ -7,8 +7,8 @@ from cadCAD.engine import ExecutionMode, ExecutionContext, Executor
 
 initial_conditions = {
   'BC_reserve': 0,
-  'token_holders': np.zeros(5),
-  'n': 5, # max number of token holders including guildbank and DAO pool
+  'token_holders': np.array([1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]),
+  'n': 8, # max number of token holders including guildbank and DAO pool
   'DAO_pool_index': 0,
   'guildbank_index': 1,
   'amount_to_mint': 100, # in eth
@@ -22,14 +22,9 @@ initial_conditions = {
   'redist': 0,
 }
 
-def choose_holder_to_mint(params, step, sL, s):
+def choose_holder(params, step, sL, s):
   index = np.random.randint(2, s['n'])
-  print("Index to mint is %s" % (index))
-  return ({'update_index': index})
-
-def choose_holder_to_burn(params, step, sL, s):
-  index = np.random.randint(1, s['n'])
-  print("Index to burn is %s" % (index))
+  print("Index to act on is %s" % (index))
   return ({'update_index': index})
 
 def choose_action(params, step, sL, s):
@@ -45,25 +40,40 @@ def update_BC_reserve_mint(params, step, sL, s, _input):
     print("New BC reserve is %s" % (x))
     return (y, x)
 
+#def update_BC_reserve_burn(params, step, sL, s, _input):
+#    return (y, x)
+
 def update_total_tokens_mint(params, step, sL, s, _input):
     y = 'total_tokens'
-    amount_to_mint = 0
-    if (_input['update_index'] > 1):
-        amount_to_mint = s['amount_to_mint']
+    amount_to_mint = s['amount_to_mint']
     x = s['total_tokens'] + amount_to_mint
+    return (y, x)
+
+def update_total_tokens_burn(params, step, sL, s, _input):
+    y = 'total_tokens'
+    token_holders = s['token_holders']
+    update_index = _input['update_index']
+    amount_to_burn = s['amount_to_burn'] * token_holders[update_index]
+    x = s['total_tokens'] - amount_to_burn
     return (y, x)
 
 def update_token_holders_mint(params, step, sL, s, _input):
   y = 'token_holders'
   x = s['token_holders']
   update_index = _input['update_index']
-  amount_to_mint = 0
-  DAO_tax_amount = 0
-  if (update_index > 1):
-    amount_to_mint = s['amount_to_mint'] * (1 - s['DAO_tax_rate'] - s['redist_tax_rate'])
-    x[update_index] = x[update_index] + amount_to_mint
-    DAO_tax_amount = s['amount_to_mint'] * s['DAO_tax_rate']
-    x[0] = x[0] + DAO_tax_amount
+  amount_to_mint = s['amount_to_mint'] * (1 - s['DAO_tax_rate'] - s['redist_tax_rate'])
+  x[update_index] = x[update_index] + amount_to_mint
+  DAO_tax_amount = s['amount_to_mint'] * s['DAO_tax_rate']
+  x[0] = x[0] + DAO_tax_amount
+  print(x)
+  return (y, x)
+
+def update_token_holders_burn(params, step, sL, s, _input):
+  y = 'token_holders'
+  x = s['token_holders']
+  update_index = _input['update_index']
+  amount_to_burn = s['amount_to_burn'] * x[update_index]
+  x[update_index] = x[update_index] - amount_to_burn
   print(x)
   return (y, x)
 
@@ -91,27 +101,20 @@ def redistribute(params, step, sL, s, _input):
 partial_state_update_blocks = [
     { 
         'policies': {
-            'choose_holder_to_mint': choose_holder_to_mint, 
+            'choose_holder': choose_holder, 
         },
         'variables': {
-            'BC_reserve': update_BC_reserve_mint,
-            'token_holders': update_token_holders_mint,
-            'redist': update_redistribution_amount_mint,
-            'total_tokens': update_total_tokens_mint,
+            # 'BC_reserve': update_BC_reserve_burn,
+            'token_holders': update_token_holders_burn,
+            # 'redist': update_redistribution_amount_burn,
+            'total_tokens': update_total_tokens_burn,
         }
-    },
-        { 
-        'policies': {
-        },
-        'variables': {
-            'token_holders': redistribute,
-        }
-    },
+    }
 ]
 
 
 simulation_parameters = {
-    'T': range(10),
+    'T': range(100),
     'N': 1,
     'M': {}
 }
