@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from cadCAD.configuration import Configuration
 from cadCAD.engine import ExecutionMode, ExecutionContext, Executor
 
-np.set_printoptions(formatter={'float': lambda x: "{0:0.3f}".format(x)})
+np.set_printoptions(formatter={'float': lambda x: "{0:0.2f}".format(x)})
 
 initial_conditions = {
   'BC_reserve': 0,
@@ -60,7 +60,7 @@ def update_total_tokens(params, step, sL, s, _input):
 def update_token_holders(params, step, sL, s, _input):
   y = 'token_holders'
   action = _input['action']
-  x = s['token_holders']
+  x = s['token_holders'].copy()
   i = _input['update_index']
   if (action == 'mint'):
     x[i] = x[i] + s['amount_to_mint'] * (1 - s['DAO_tax_rate'] - s['redist_tax_rate'])
