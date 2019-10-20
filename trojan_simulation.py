@@ -19,6 +19,7 @@ initial_conditions = {
   'update_index': 0,
   'DAO_tax_rate': 0.02,
   'redist_tax_rate': 0.01,
+  'burn_tax_rate': 0.03,
   'redist': 0,
 }
 
@@ -40,8 +41,12 @@ def update_BC_reserve_mint(params, step, sL, s, _input):
     print("New BC reserve is %s" % (x))
     return (y, x)
 
-#def update_BC_reserve_burn(params, step, sL, s, _input):
-#    return (y, x)
+def update_BC_reserve_burn(params, step, sL, s, _input):
+    y = 'BC_reserve'
+    update_index = s['update_index']
+    amount_to_burn = s['amount_to_burn'] * s['token_holders'][update_index]
+    x = s['BC_reserve'] - amount_to_burn * (1 - s['burn_tax_rate'])
+    return (y, x)
 
 def update_total_tokens_mint(params, step, sL, s, _input):
     y = 'total_tokens'
@@ -73,7 +78,9 @@ def update_token_holders_burn(params, step, sL, s, _input):
   x = s['token_holders']
   update_index = _input['update_index']
   amount_to_burn = s['amount_to_burn'] * x[update_index]
+  DAO_tax_amount = amount_to_burn * s['burn_tax_rate']
   x[update_index] = x[update_index] - amount_to_burn
+  x[0] = x[0] + DAO_tax_amount
   print(x)
   return (y, x)
 
@@ -84,6 +91,11 @@ def update_redistribution_amount_mint(params, step, sL, s, _input):
   if (update_index > 1):
     redist_tax_amount = s['amount_to_mint'] * s['redist_tax_rate']
   print(redist_tax_amount)
+  return (y, redist_tax_amount)
+
+def update_redistribution_amount_burn(params, step, sL, s, _input):
+  y = 'redist'
+  redist_tax_amount = 0
   return (y, redist_tax_amount)
 
 def redistribute(params, step, sL, s, _input):
@@ -104,9 +116,9 @@ partial_state_update_blocks = [
             'choose_holder': choose_holder, 
         },
         'variables': {
-            # 'BC_reserve': update_BC_reserve_burn,
+            'BC_reserve': update_BC_reserve_burn,
             'token_holders': update_token_holders_burn,
-            # 'redist': update_redistribution_amount_burn,
+            'redist': update_redistribution_amount_burn,
             'total_tokens': update_total_tokens_burn,
         }
     }
